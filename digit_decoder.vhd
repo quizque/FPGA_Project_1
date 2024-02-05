@@ -10,7 +10,7 @@ end entity digit_decoder;
 architecture decoder of digit_decoder is
 	constant ss_0 : std_logic_vector(6 downto 0) := "1000000";
 	constant ss_1 : std_logic_vector(6 downto 0) := "1111001";
-	constant ss_2 : std_logic_vector(6 downto 0) := "1011101";
+	constant ss_2 : std_logic_vector(6 downto 0) := "0100100";
 	constant ss_3 : std_logic_vector(6 downto 0) := "0110000";
 	constant ss_4 : std_logic_vector(6 downto 0) := "0011001";
 	constant ss_5 : std_logic_vector(6 downto 0) := "0010010";

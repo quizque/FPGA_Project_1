@@ -75,12 +75,14 @@ begin
 	lowi_latte     <= '1' when coffee_availability(3) <= "00011" else '0';
 	
 	-- Set the coffee type display
+	coffee_type <= inpt(1 downto 0);
 	with coffee_type select
 		coffee_type_ssegment <= (ss_A & ss_M) when "00", -- "AM" Americano
 										(ss_M & ss_O) when "01", -- "MO" Mocha
 										(ss_E & ss_S) when "10", -- "ES" Espresso
 										(ss_L & ss_A) when "11"; -- "LA" Latte
-										
+	cup_size <= inpt(3 downto 2);		
+								
 	with cup_size select
 		cup_size_ssegment <= (ss_S) when "00", -- Small
 									(ss_M) when "01", -- Medium
@@ -104,14 +106,16 @@ begin
 			end if;
 		
 		-- Otherwise, run the normal code on rising edge of the clock
-		elsif rising_edge(clk) then
+		end if;
+		if rising_edge(clk) then
 		
-			--coffee_availability(0) <= std_logic_vector(unsigned(coffee_availability(0)) - 1);
-		
-			--if confirm = '1' and dispense = '0' then
-			--	coffee_type <= inpt(1 downto 0);
-			--	cup_size    <= inpt(3 downto 2);
-			--end if;
+			if cup_size = "00" then
+				coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 1);
+			elsif cup_size = "01" then
+				coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 2);
+			elsif cup_size = "10" then
+				coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 3);
+			end if;
 			
 		
 			-- If we are in admin mode, process admin mode logic
