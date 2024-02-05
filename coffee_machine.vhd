@@ -108,10 +108,10 @@ begin
 		
 			--coffee_availability(0) <= std_logic_vector(unsigned(coffee_availability(0)) - 1);
 		
-			if confirm = '1' and dispense = '0' then
-				coffee_type <= inpt(1 downto 0);
-				cup_size    <= inpt(3 downto 2);
-			end if;
+			--if confirm = '1' and dispense = '0' then
+			--	coffee_type <= inpt(1 downto 0);
+			--	cup_size    <= inpt(3 downto 2);
+			--end if;
 			
 		
 			-- If we are in admin mode, process admin mode logic
