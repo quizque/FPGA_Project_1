@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity coffee_machine is port (
-	input : in std_logic_vector(6 downto 0);
+	inpt : in std_logic_vector(6 downto 0);
 	reset : in std_logic;
 	clk	: in std_logic;
 	
@@ -43,12 +43,19 @@ architecture rtl of coffee_machine is
 	signal lowi_latte     : std_logic := '0';
 	
 	-- Constants for seven segments
-	constant ss_A : std_logic_vector(6 downto 0) := "1110111";
+	constant ss_A : std_logic_vector(6 downto 0) := "0001000";
 	constant ss_M : std_logic_vector(6 downto 0) := "1101010";
 	constant ss_O : std_logic_vector(6 downto 0) := "1000000";
-	constant ss_E : std_logic_vector(6 downto 0) := "1111001";
-	constant ss_S : std_logic_vector(6 downto 0) := "1101101";
-	constant ss_L : std_logic_vector(6 downto 0) := "0111000";
+	constant ss_E : std_logic_vector(6 downto 0) := "0000110";
+	constant ss_S : std_logic_vector(6 downto 0) := "0010010";
+	constant ss_L : std_logic_vector(6 downto 0) := "1000111";
+	constant ss_dash : std_logic_vector(6 downto 0) := "0111111";
+	
+	component digit_decoder is
+		Port( 
+			sw_in : in std_logic_vector(4 downto 0);
+		ss_seg_out : out std_logic_vector(13 downto 0));
+	end component;
 	
 begin
 
@@ -56,10 +63,9 @@ begin
 	admin_mode_indicator <= admin_mode;
 	
 	-- Assign inputs to their respective internal singals
-	coffee_type <= input(1 downto 0);
-	cup_size    <= input(3 downto 2);
-	confirm     <= input(5);
-	dispense    <= input(6);
+	
+	confirm     <= inpt(5);
+	dispense    <= inpt(6);
 	
 	-- Connect indicators to the output LEDs
 	low_coffee_indicators <= (lowi_latte, lowi_espresso, lowi_mocha, lowi_americano);
@@ -79,15 +85,19 @@ begin
 		cup_size_ssegment <= (ss_S) when "00", -- Small
 									(ss_M) when "01", -- Medium
 									(ss_L) when "10", -- Large
-									(ss_E) when others; -- Error
+									(ss_dash) when others; -- Error
+								
+	seg_decoder : digit_decoder
+		port map (sw_in => coffee_availability(to_integer(unsigned(coffee_type))),
+					 ss_seg_out => available_quantity_ssegment);
 									
 	
 	process (clk, reset)
 	begin
 		-- If the reset button is pressed, run reset code
-		if reset = '1' then
+		if rising_edge(reset) then
 			
-			if input = "1111111" then
+			if inpt = "1111111" then
 				admin_mode <= '1';
 			else
 				admin_mode <= '0';
@@ -96,15 +106,21 @@ begin
 		-- Otherwise, run the normal code on rising edge of the clock
 		elsif rising_edge(clk) then
 		
-			coffee_availability(0) <= std_logic_vector(unsigned(coffee_availability(0)) - 1);
+			--coffee_availability(0) <= std_logic_vector(unsigned(coffee_availability(0)) - 1);
+		
+			if confirm = '1' and dispense = '0' then
+				coffee_type <= inpt(1 downto 0);
+				cup_size    <= inpt(3 downto 2);
+			end if;
+			
 		
 			-- If we are in admin mode, process admin mode logic
-			if admin_mode = '1' then
+			--if admin_mode = '1' then
 			
 			-- Otherwise, process usermode logic
-			else
+			--else
 			
-			end if;
+			--end if;
 		
 		end if;
 	end process;
