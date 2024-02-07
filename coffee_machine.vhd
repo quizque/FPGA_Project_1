@@ -33,9 +33,6 @@ architecture rtl of coffee_machine is
 	signal led_low_espresso  : std_logic := '0';
 	signal led_low_latte     : std_logic := '0';
 	
-	-- Admin indicator
-	signal led_admin_indicator : std_logic := '0';
-	
 	
 	-----------------------------------------------------------------
 	--- Internal Variables
@@ -80,7 +77,8 @@ architecture rtl of coffee_machine is
 	component digit_decoder is
 		Port( 
 			sw_in : in std_logic_vector(4 downto 0);
-		ss_seg_out : out std_logic_vector(13 downto 0));
+			enabled : in std_logic;
+			ss_seg_out : out std_logic_vector(13 downto 0));
 	end component;
 	
 begin
@@ -103,7 +101,7 @@ begin
 	o_low_coffee_indicators(3) <= led_low_latte;
 	
 	-- Attach admin mode indicator
-	o_admin_mode <= led_admin_indicator;
+	o_admin_mode <= admin_mode;
 	
 	-----------------------------------------------------------------
 	---- Constant logic
@@ -129,25 +127,42 @@ begin
 						  (ss_M) when "101", -- Medium
 						  (ss_L) when "110", -- Large
 						  (ss_dash) when others; -- Error
+						  
+	seg_decoder : digit_decoder
+		port map (sw_in => coffee_availability(to_integer(unsigned(coffee_type))),
+					 enabled => (admin_mode and confirm),
+					 ss_seg_out => o_available_quantity);
 	
 	-----------------------------------------------------------------
 	---- Clocked logic
 	----
 	
-	process (i_clk, i_reset)
+	p_rst_logic : process(i_reset, i_input) is
+	begin
+		if rising_edge(i_reset) then
+			if i_input = "1111111" then
+				admin_mode <= '1';
+			else
+				admin_mode <= '0';
+			end if;
+		end if;
+	end process p_rst_logic;
+	
+	
+	p_clked_logic : process (i_clk, i_reset) is
 	begin
 		-- If reset is pressed, reset the state and
 		-- check for admin mode enable (DO NOT RESET QUANTITY)
 		if i_reset = '1' then
 			confirm <= '0';
-		
+			
 		-- Run only on the rising edge
 		elsif rising_edge(i_clk) then
 		
 			-- If the confirm switch is on AND
-			-- we have enough coffee to dispense, activate the confirm
+			-- we have enough coffee to dispense AND the size is valid, activate the confirm
 			-- and set the size/type
-			if SW_confirm = '1' and confirm = '0' and coffee_availability(to_integer(unsigned(sw_coffee_type))) > "00011" then
+			if SW_confirm = '1' and confirm = '0' and coffee_availability(to_integer(unsigned(sw_coffee_type))) > "00011" and sw_cup_size /= "11" then
 				confirm <= '1';
 				coffee_type <= sw_coffee_type;
 				cup_size <= sw_cup_size;
@@ -155,7 +170,7 @@ begin
 			
 			-- If confirm is active and dispense is high,
 			-- reset confirm and substract quantity
-			if sw_dispense = '1' and confirm = '1'  then
+			if sw_dispense = '1' and confirm = '1' and admin_mode = '0' then
 				confirm <= '0';
 				
 				if cup_size = "00" then
@@ -166,8 +181,15 @@ begin
 					coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 3);
 				end if;
 			end if;
-		
+			
+			-- (ADMIN MODE) If confirm is active and dispense is high,
+			-- reset confirm and set quantity to 30
+			if sw_dispense = '1' and confirm = '1' and admin_mode = '1' then
+				confirm <= '0';
+				coffee_availability(to_integer(unsigned(coffee_type))) <= "11110";
+			end if;
 		end if;
-	end process;
+		
+	end process p_clked_logic;
 
 end architecture rtl;
