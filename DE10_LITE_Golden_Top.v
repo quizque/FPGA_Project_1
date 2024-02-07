@@ -150,15 +150,15 @@ module DE10_LITE_Golden_Top(
 //=======================================================
 
 	coffee_machine instanze (
-		.inpt(SW[6:0]),
-		.reset(KEY[1]),
-		.clk(KEY[0]),
+		.i_input(SW[6:0]),
+		.i_reset(!KEY[1]), // Shmit trigger is inverted
+		.i_clk(!KEY[0]), // Shmit trigger is inverted
 		
-		.low_coffee_indicators(LEDR[3:0]),
-		.coffee_type_ssegment({HEX1[6:0], HEX0[6:0]}),
-		.available_quantity_ssegment({HEX5[6:0], HEX4[6:0]}),
-		.cup_size_ssegment({HEX2[6:0]}),
-		.admin_mode_indicator(LEDR[9])
+		.o_low_coffee_indicators(LEDR[3:0]),
+		.o_coffee_type({HEX1[6:0], HEX0[6:0]}),
+		.o_available_quantity({HEX5[6:0], HEX4[6:0]}),
+		.o_cup_size({HEX2[6:0]}),
+		.o_admin_mode(LEDR[9])
 	);
 
 endmodule
