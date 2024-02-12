@@ -162,10 +162,22 @@ begin
 			-- If the confirm switch is on AND
 			-- we have enough coffee to dispense AND the size is valid, activate the confirm
 			-- and set the size/type
-			if SW_confirm = '1' and confirm = '0' and coffee_availability(to_integer(unsigned(sw_coffee_type))) > "00011" and sw_cup_size /= "11" then
+			if sw_confirm = '1' and confirm = '0' and coffee_availability(to_integer(unsigned(sw_coffee_type))) > "00011" and sw_cup_size /= "11" then
 				confirm <= '1';
 				coffee_type <= sw_coffee_type;
 				cup_size <= sw_cup_size;
+			end if;
+			
+			if sw_confirm = '1'and confirm = '0'  and admin_mode = '1' then
+				confirm <= '1';
+				coffee_type <= sw_coffee_type;
+				cup_size <= "11";
+			end if;
+			
+			if sw_confirm = '0' and confirm = '1' and admin_mode = '1' then
+				confirm <= '0';
+				coffee_type <= sw_coffee_type;
+				cup_size <= "11";
 			end if;
 			
 			-- If confirm is active and dispense is high,
