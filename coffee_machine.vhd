@@ -74,12 +74,10 @@ architecture rtl of coffee_machine is
 	constant ss_L : std_logic_vector(6 downto 0) := "1000111";
 	constant ss_dash : std_logic_vector(6 downto 0) := "0111111";
 	
-	component digit_decoder is
-		Port( 
-			sw_in : in std_logic_vector(4 downto 0);
-			enabled : in std_logic;
-			ss_seg_out : out std_logic_vector(13 downto 0));
-	end component;
+	-----------------------------------------------------------------
+	--- Simulation workaround stuff
+	signal current_coffee_amount : std_logic_vector(4 downto 0) := "11110";
+	signal enable_display_amount : std_logic := '1';
 	
 begin
 
@@ -127,10 +125,15 @@ begin
 						  (ss_M) when "101", -- Medium
 						  (ss_L) when "110", -- Large
 						  (ss_dash) when others; -- Error
-						  
-	seg_decoder : digit_decoder
-		port map (sw_in => coffee_availability(to_integer(unsigned(coffee_type))),
-					 enabled => (admin_mode and confirm),
+	
+	-- This is just to make Questa stop erroring about vcom-1436
+	-- even though all the logic is correct.
+	current_coffee_amount <= coffee_availability(to_integer(unsigned(coffee_type)));
+	enable_display_amount <= admin_mode and confirm;
+	
+	seg_decoder : entity work.digit_decoder
+		port map (sw_in => current_coffee_amount,
+					 enabled => enable_display_amount,
 					 ss_seg_out => o_available_quantity);
 	
 	-----------------------------------------------------------------
