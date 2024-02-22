@@ -137,8 +137,13 @@ begin
 	---- Clocked logic
 	----
 	
-	p_rst_logic : process(i_reset, i_input) is
+	process (i_clk, i_reset) is
 	begin
+		
+		-- We can't perform logic in the reset below
+		-- because it would cause a latch to be infered
+		-- (making "memory" where it shouldn't). This
+		-- forces us to put the mode logic in here.
 		if rising_edge(i_reset) then
 			if i_input = "1111111" then
 				admin_mode <= '1';
@@ -146,62 +151,83 @@ begin
 				admin_mode <= '0';
 			end if;
 		end if;
-	end process p_rst_logic;
 	
-	
-	p_clked_logic : process (i_clk, i_reset) is
-	begin
-		-- If reset is pressed, reset the state and
-		-- check for admin mode enable (DO NOT RESET QUANTITY)
+		-- If reset is pressed, reset the confirm state
 		if i_reset = '1' then
 			confirm <= '0';
 			
 		-- Run only on the rising edge
 		elsif rising_edge(i_clk) then
+			
+			-- Common mode logic
+			-- Stuff that both modes use
+			
+			-- If the user turns of confirm from being in
+			-- the confirm state, then we get out of the confirm
+			-- state.
+			if sw_confirm = '0' and confirm = '1' then
+				confirm <= '0';
+			end if;
 		
-			-- If the confirm switch is on AND
-			-- we have enough coffee to dispense AND the size is valid, activate the confirm
-			-- and set the size/type
-			if sw_confirm = '1' and confirm = '0' and coffee_availability(to_integer(unsigned(sw_coffee_type))) > "00011" and sw_cup_size /= "11" then
-				confirm <= '1';
-				coffee_type <= sw_coffee_type;
-				cup_size <= sw_cup_size;
-			end if;
-			
-			if sw_confirm = '1'and confirm = '0'  and admin_mode = '1' then
-				confirm <= '1';
-				coffee_type <= sw_coffee_type;
-				cup_size <= "11";
-			end if;
-			
-			if sw_confirm = '0' and confirm = '1' and admin_mode = '1' then
-				confirm <= '0';
-				coffee_type <= sw_coffee_type;
-				cup_size <= "11";
-			end if;
-			
-			-- If confirm is active and dispense is high,
-			-- reset confirm and substract quantity
-			if sw_dispense = '1' and confirm = '1' and admin_mode = '0' then
-				confirm <= '0';
+			-- User mode logic
+			if admin_mode = '0' then
 				
-				if cup_size = "00" then
-					coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 1);
-				elsif cup_size = "01" then
-					coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 2);
-				elsif cup_size = "10" then
-					coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - 3);
+				-- This is the primary "activation" statement.
+				-- If the user has the confirm switch ACTIVE,
+				-- that we currently AREN'T in confirm state,
+				-- that the selected coffee aviable is more then the size requested,
+				-- and that the size is valid. The 
+				if sw_confirm = '1' and 
+				   confirm = '0' and 
+					unsigned(coffee_availability(to_integer(unsigned(sw_coffee_type)))) >= unsigned(sw_cup_size) + 1 and 
+					sw_cup_size /= "11" then
+					
+					-- If all of that is true, then we can activate the confirm state 
+					-- and store the coffee type and size.
+					confirm <= '1';
+					coffee_type <= sw_coffee_type;
+					cup_size <= sw_cup_size;
 				end if;
-			end if;
+				
+				-- If the user has the dispense switch on
+				-- and is in the confirm state.
+				if sw_dispense = '1' and confirm = '1'then
+					-- Reset confirm back to zero
+					confirm <= '0';
+					
+					-- Subtract the cup size from the selected coffee.
+					-- This long statement just converts the bit vectors 
+					-- into ints, does some math, and then convert them
+					-- back into bit vectors. Why does VHDL have to make
+					-- this so complex? The additional -1 is because the switches start at 0.
+					coffee_availability(to_integer(unsigned(coffee_type))) <= std_logic_vector(unsigned(coffee_availability(to_integer(unsigned(coffee_type)))) - to_integer(unsigned(cup_size)) - 1);
+				end if;
+		
+			-- Admin mode logic
+			elsif admin_mode = '1' then
+				
+				-- If the confirm switch is on and we
+				-- aren't in the confirm state, store
+				-- the selected values and set the state.
+				if sw_confirm = '1'and confirm = '0' then
+					confirm <= '1';
+					coffee_type <= sw_coffee_type;
+					
+					-- This is done since cup size doesn't matter in admin mode.
+					-- It will force the display to show just a dash.
+					cup_size <= "11";
+				end if;
+				
+				-- If confirm is active and dispense is high,
+				-- reset confirm and set quantity to 30
+				if sw_dispense = '1' and confirm = '1' then
+					confirm <= '0';
+					coffee_availability(to_integer(unsigned(coffee_type))) <= "11110";
+				end if;
 			
-			-- (ADMIN MODE) If confirm is active and dispense is high,
-			-- reset confirm and set quantity to 30
-			if sw_dispense = '1' and confirm = '1' and admin_mode = '1' then
-				confirm <= '0';
-				coffee_availability(to_integer(unsigned(coffee_type))) <= "11110";
 			end if;
 		end if;
 		
-	end process p_clked_logic;
+	end process;
 
 end architecture rtl;
